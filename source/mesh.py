@@ -9,6 +9,8 @@ class Mesh:
         cells_per_zone = params.cells_per_zone
         total_cross_section = params.total_cross_section
         scattering_cross_section = params.scattering_cross_section
+        source = params.source
+        boundary_conditions = params.boundary_conditions
 
         self.total_length = np.sum(length_per_zone)
         self.n_cells = np.sum(cells_per_zone)
@@ -20,6 +22,9 @@ class Mesh:
         self.sigma_t = np.repeat(total_cross_section, cells_per_zone)
         self.sigma_s = np.repeat(scattering_cross_section, cells_per_zone)
         self.sigma_a = self.sigma_t - self.sigma_s
+
+        self.source = np.repeat(source, cells_per_zone)
+        self.boundary_conditions = boundary_conditions
 
     def compute_lumped_mass_array(self):
         return [self.compute_lumped_mass(i) for i in range(len(self.vertices))]
@@ -52,5 +57,6 @@ class Mesh:
             f"\n total_length={self.total_length}, \n n_cells={self.n_cells}, "
             f"\n n_vertices={self.n_vertices}, \n h={self.h}, \n vertices={self.vertices}, "
             f"\n lumped_mass={self.lumped_mass}, \n material_id={self.material_id}, "
-            f"\n sigma_t={self.sigma_t}, \n sigma_s={self.sigma_s}, \n sigma_a={self.sigma_a}"
+            f"\n sigma_t={self.sigma_t}, \n sigma_s={self.sigma_s}, \n sigma_a={self.sigma_a},"
+            f"\n source={self.source}, \n boundary_conditions={self.boundary_conditions}"
         )
