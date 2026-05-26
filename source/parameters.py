@@ -31,5 +31,5 @@ class ParameterHandler:
             f"\n Parameters:"
             f"\n length_per_zone={self.length_per_zone}, \n cells_per_zone={self.cells_per_zone},"
             f"\n total_cross_section={self.total_cross_section}, \n scattering_cross_section={self.scattering_cross_section},"
-            f"\n \source={self.source}, \n boundary_conditions={self.boundary_conditions}"
+            f"\n source={self.source}, \n boundary_conditions={self.boundary_conditions}"
         )
