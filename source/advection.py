@@ -31,19 +31,33 @@ hat_fns = [phi0hat, phi1hat]
 dhat_fns = [dphi0hat, dphi1hat]
 
 # Assemble the global matrix for the advection-diffusion problem 
-def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True):
+def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
+    
+    C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
+    
+    tau =  C * mesh.h if use_supg else np.zeros(mesh.n_cells)
     
     mass_matrix = assemble_mass_matrix(mu, mesh)
 
     stiffness_matrix = assemble_stiffness_matrix(mu, mesh)
+    
+    # matrix (3) is given by sigma_t * mu * tau * u_h * v_h'
+    s3_matrix = assemble_s3_matrix(mu, mesh, tau)
 
-    matrix = mass_matrix + stiffness_matrix
+    # matrix (4) is given by mu * mu * tau * u_h' * v_h'
+    s4_matrix = assemble_s4_matrix(mu, mesh, tau)
+
+    matrix = mass_matrix + stiffness_matrix + s3_matrix + s4_matrix
+    # matrix = mass_matrix + stiffness_matrix #+ s3_matrix + s4_matrix
 
     if boundary_condition:
         if mu > 0:
-            matrix[0, 0] += mu
+            matrix[0, 0] += mu * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * (1 / mesh.h[0])
+            matrix[1, 0] += mu**2 * tau[0] * dhat_fns[1](0) * (1 / mesh.h[0])
         elif mu < 0:
-            matrix[-1, -1] += mu
+            matrix[-1, -1] += mu * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * (1 / mesh.h[-1])
+            matrix[-2, -1] += mu**2 * tau[-1] * dhat_fns[0](1) * (1 / mesh.h[-1])
+
 
     return matrix
 
@@ -118,13 +132,17 @@ def assemble_stiffness_matrix(mu: float, mesh: Mesh):
     
     return stiffness_matrix
 
-def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True):
+def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
     data = np.zeros((mesh.n_vertices))
 
-    # Mass matrix
+    C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
+    
+    tau =  C * mesh.h if use_supg else np.zeros(mesh.n_cells)
+    
+    # Compute the q * v_h term
     for k in range(mesh.n_cells):
         h = mesh.h[k]
-        q = mesh.source[k]
+        q = mesh.source_per_cell[k]
 
         for i_hat in range(0, 2):
             i_global = i_hat + k
@@ -134,11 +152,85 @@ def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True):
 
             data[i_global] += acc
 
+    if use_supg:
+        # Compute the q * tau_k * mu * v_h'  term
+        for k in range(mesh.n_cells):
+            h = mesh.h[k]
+            q = mesh.source_per_cell[k]
+            per_cell_tau = tau[k]
+
+            for i_hat in range(0, 2):
+                i_global = i_hat + k
+                acc = 0
+                for x in range(len(gauss_points)):
+                    acc += q * per_cell_tau * mu * dhat_fns[i_hat](gauss_points[x]) * gauss_weights[x]
+
+                data[i_global] += acc
+
     if boundary_condition:
         if mu > 0:
-            data[0] += mu * mesh.inflow_value
+            # data[0] += mu * mesh.inflow_value
+            data[0] += mu * mesh.inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * mesh.inflow_value * (1 / mesh.h[0])
+            data[1] += mu**2 * tau[0] * dhat_fns[1](0) * mesh.inflow_value * (1 / mesh.h[0])
         elif mu < 0:
-            data[-1] += mu * mesh.inflow_value
+            data[-1] += mu * mesh.inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * mesh.inflow_value * (1 / mesh.h[-1])
+            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * mesh.inflow_value * (1 / mesh.h[-1])
 
     return data
 
+def assemble_s3_matrix(mu: float, mesh: Mesh, tau: np.array):
+    row = []
+    col = []
+    data = []
+
+    # mu^2 * tau * u_h' * v_h'
+    for k in range(mesh.n_cells):
+        per_cell_tau = tau[k]
+        for i_hat in range(0, 2):
+            for j_hat in range(0, 2):
+                i_global = i_hat + k
+                j_global = j_hat + k
+                acc = 0
+                for x in range(len(gauss_points)):
+                    acc += (mu**2 * per_cell_tau
+                        * dhat_fns[i_hat](gauss_points[x])
+                        * dhat_fns[j_hat](gauss_points[x])
+                        * gauss_weights[x] / mesh.h[k]
+                    )
+
+                row.append(i_global)
+                col.append(j_global)
+                data.append(acc)
+
+    s3_matrix = csr_matrix((data, (row, col)), shape=(mesh.n_vertices, mesh.n_vertices))
+    
+    return s3_matrix
+
+def assemble_s4_matrix(mu: float, mesh: Mesh, tau: np.array):
+    row = []
+    col = []
+    data = []
+
+    # sigma_t * mu * tau * u_h * v_h'
+    for k in range(mesh.n_cells):
+        per_cell_tau = tau[k]
+        per_cell_sigma_t = mesh.sigma_t[k]
+        for i_hat in range(0, 2):
+            for j_hat in range(0, 2):
+                i_global = i_hat + k
+                j_global = j_hat + k
+                acc = 0
+                for x in range(len(gauss_points)):
+                    acc += (mu * per_cell_tau * per_cell_sigma_t
+                        * dhat_fns[i_hat](gauss_points[x])
+                        * hat_fns[j_hat](gauss_points[x])
+                        * gauss_weights[x]
+                    )
+
+                row.append(i_global)
+                col.append(j_global)
+                data.append(acc)
+
+    s4_matrix = csr_matrix((data, (row, col)), shape=(mesh.n_vertices, mesh.n_vertices))
+    
+    return s4_matrix

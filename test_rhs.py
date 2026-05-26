@@ -11,7 +11,7 @@ def main():
     # generate mesh
     mesh = Mesh(params)
 
-    rhs = assemble_rhs(1.0, mesh, boundary_condition=False)
+    rhs = assemble_rhs(1.0, mesh, boundary_condition=False, use_supg=False)
     assert np.allclose(rhs, [0.25, 0.5, 0.25, 0.0, 0.0])
 
     print(rhs)

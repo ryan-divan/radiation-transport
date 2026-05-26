@@ -27,14 +27,17 @@ def main():
     U = sp.linalg.spsolve(M, Q)
     print(U)
 
+    # exact_fn = lambda x : np.exp(-x) 
+    # U_exact = [exact_fn(xs) for xs in mesh.vertices]
     # exact_fn = lambda x : np.exp(-x) if 0 <= x < 1/2 else np.exp(1/2) * np.exp(-2 * x)
     # U_exact = [exact_fn(xs) for xs in mesh.vertices]
 
     # plt.plot(mesh.vertices, U_exact, label="exact")
     
     plt.plot(mesh.vertices, U, label="approximate")
-    plt.legend()
-    plt.savefig("test_system.png")
+    # plt.plot(mesh.vertices, U_exact, label="exact")
+    # plt.legend()
+    plt.savefig("test_supg_full_system.png")
 
     print("Test passed!")
 
