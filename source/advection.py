@@ -3,15 +3,11 @@ from scipy.integrate import quad
 from .mesh import Mesh
 import numpy as np
 
+# TODO: add connectivity array for higher-dimensional case
+# def generate_connectivity_array(mesh: Mesh):
+#     pass
 
-# def generate_sparsity(matrix: csr_matrix):
-#     matrix = matrix.tocoo()
-#     row = matrix.row
-#     col = matrix.col
-#     data = matrix.data
-#     return row, col, data
-
-
+# Basis functions and derivatives on unit interval
 def phi1hat(x):
     return x
 
@@ -27,17 +23,41 @@ def dphi1hat(x):
 def dphi0hat(x):
     return -1
 
-
+# Quadrature points and weights for 2-point Gauss quadrature on [0, 1]
 gauss_points = [0.5 * (1 - 1 / np.sqrt(3)), 0.5 * (1 + 1 / np.sqrt(3))]
 gauss_weights = [1 / 2, 1 / 2]
 
+hat_fns = [phi0hat, phi1hat]
+dhat_fns = [dphi0hat, dphi1hat]
 
-def assemble_matrix(mu: float, mesh: Mesh):
+# Assemble the global matrix for the advection-diffusion problem 
+def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True):
+    
+    mass_matrix = assemble_mass_matrix(mu, mesh)
+
+    stiffness_matrix = assemble_stiffness_matrix(mu, mesh)
+
+    matrix = mass_matrix + stiffness_matrix
+
+    if boundary_condition:
+        if mu > 0:
+            matrix[0, 0] += mu
+        elif mu < 0:
+            matrix[-1, -1] += mu
+
+    return matrix
+
+# Assemble the mass matrix for the advection-diffusion problem.
+# M_ij = integral of sigma_t * phi_i * phi_j dx, sigma_t is the total cross section.
+# M is sparse, using CSR for efficiency.
+# Loops over each cell, compute the local mass matrix for that cell, then add to M.
+# Using 2-point Gauss quadrature for integrals.
+# basis functions are the shifted to reference cell, evaluated at the quadrature points relative to reference cell. Factor of h because of this as integration factor from change of vars. 
+def assemble_mass_matrix(mu: float, mesh: Mesh):
     row = []
     col = []
     data = []
 
-    # Mass matrix
     for k in range(mesh.n_cells):
         h = mesh.h[k]
         sigma_t = mesh.sigma_t[k]
@@ -59,36 +79,46 @@ def assemble_matrix(mu: float, mesh: Mesh):
                 col.append(j_global)
                 data.append(acc)
 
-    row = np.array(row)
-    col = np.array(col)
-    data = np.array(data)
-    print(row)
-    print(col)
-    print(data)
+    mass_matrix = csr_matrix((data, (row, col)), shape=(mesh.n_vertices, mesh.n_vertices))
+    
+    return mass_matrix
 
-    coo = coo_matrix((data, (row, col)), shape=(mesh.n_vertices, mesh.n_vertices))
+# Assemble the stiffness matrix for the advection-diffusion problem.
+#   K_ij = integral mu * dphi_i/dx * dphi_j/dx dx, mu is the angle. Note again that basis are w.r.t reference cell.
+# Loops over each cell, compute the local mass matrix for that cell, then add to S.
+# Using 2-point Gauss quadrature for integrals.
+# S is sparse matrix, and we will use the COO format to assemble it efficiently. 
+# We will loop over each cell in the mesh, compute the local stiffness matrix for that cell, and then add it to the global stiffness matrix.
+# The stiffness matrix will be added to the mass matrix to form the global matrix for the advection-diffusion problem.
+def assemble_stiffness_matrix(mu: float, mesh: Mesh):
 
-    return csr_matrix(coo)
+    row = []
+    col = []
+    data = []
 
+    for k in range(mesh.n_cells):
+        h = mesh.h[k]
+        for i_hat in range(0, 2):
+            for j_hat in range(0, 2):
+                i_global = i_hat + k
+                j_global = j_hat + k
+                acc = 0
+                for x in range(len(gauss_points)):
+                    acc += (mu
+                        * hat_fns[i_hat](gauss_points[x])
+                        * dhat_fns[j_hat](gauss_points[x])
+                        * gauss_weights[x]
+                    )
 
-def compute_source_term(phi_index: int, cell_index: int, mesh: Mesh):
-    if cell_index == phi_index:
+                row.append(i_global)
+                col.append(j_global)
+                data.append(acc)
 
-        def integrand(x):
-            return mesh.source[cell_index] * phi1hat(x) * mesh.h[cell_index]
+    stiffness_matrix = csr_matrix((data, (row, col)), shape=(mesh.n_vertices, mesh.n_vertices))
+    
+    return stiffness_matrix
 
-    if cell_index == phi_index - 1:
-
-        def integrand(x):
-            return mesh.source[cell_index] * phi0hat(x) * mesh.h[cell_index]
-
-    return quad(integrand, 0, 1)[0]
-
-
-hat_fns = [phi0hat, phi1hat]
-
-
-def assemble_rhs(mu, mesh: Mesh):
+def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True):
     data = np.zeros((mesh.n_vertices))
 
     # Mass matrix
@@ -104,41 +134,11 @@ def assemble_rhs(mu, mesh: Mesh):
 
             data[i_global] += acc
 
+    if boundary_condition:
+        if mu > 0:
+            data[0] += mu * mesh.inflow_value
+        elif mu < 0:
+            data[-1] += mu * mesh.inflow_value
+
     return data
 
-
-def mass_entry(i, j, gauss_matrix, mesh):
-    if i > j:
-        return (
-            mesh.sigma_t[j] * np.dot(gauss_matrix[:][0], gauss_matrix[:][1]) * mesh.h[j]
-        )
-    elif i < j:
-        return (
-            mesh.sigma_t[i] * np.dot(gauss_matrix[:][0], gauss_matrix[:][1]) * mesh.h[i]
-        )
-    else:
-        return (
-            mesh.sigma_t[i]
-            * (gauss_matrix[0][0] ** 2 + gauss_matrix[1][0] ** 2)
-            * mesh.h[i]
-            + mesh.sigma_t[i - 1]
-            * (gauss_matrix[0][1] ** 2 + gauss_matrix[1][1] ** 2)
-            * mesh.h[i - 1]
-        )
-
-
-def stiffness_entry(i, j, mu, mesh):
-    if i > j:
-
-        def integrand(x):
-            return mu * phi0hat(x) * dphi1hat(x)
-    elif i < j:
-
-        def integrand(x):
-            return mu * phi0hat(x) * dphi1hat(x)
-    else:
-
-        def integrand(x):
-            return mu * phi1hat(x) * dphi1hat(x) + mu * phi0hat(x) * dphi0hat(x)
-
-    return quad(integrand, 0, 1)[0]

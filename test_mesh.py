@@ -1,24 +1,27 @@
 import sys
+import numpy as np
 from source.parameters import ParameterHandler
 from source.mesh import Mesh
 
 
 def main():
-    # check that the parameters file is provided as an argument
-    if len(sys.argv) < 2:
-        print("Usage: python3 test_mesh.py <parameter_file>")
-        sys.exit(1)
-
-    # load parameters
-    params = ParameterHandler(sys.argv[1])
+    params = ParameterHandler("test_params/very_simple_params.toml")
 
     # generate mesh
     mesh = Mesh(params)
 
-    # print parameters and mesh information
-    print(params)
     print(mesh)
+    # print parameters and mesh information
 
+    assert np.isclose(mesh.total_length, 2.0) and mesh.n_cells == 4 and mesh.n_vertices == 5
+    assert np.allclose(mesh.h, [0.5, 0.5, 0.5, 0.5])
+    assert np.allclose(mesh.vertices, [0.0, 0.5, 1.0, 1.5, 2.0])
+    assert np.isclose(mesh.lumped_mass[0], 0.25) and np.isclose(mesh.lumped_mass[-1], 0.25)
+    assert np.isclose(mesh.lumped_mass[1], 0.5) and np.isclose(mesh.lumped_mass[2], 0.5) and np.isclose(mesh.lumped_mass[3], 0.5)
+    assert mesh.material_id[0] == 0 and mesh.material_id[1] == 0
+    assert mesh.material_id[2] == 1 and mesh.material_id[3] == 1
+
+    print("Test passed!")
 
 if __name__ == "__main__":
     main()

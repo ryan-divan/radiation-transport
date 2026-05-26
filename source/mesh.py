@@ -10,7 +10,7 @@ class Mesh:
         total_cross_section = params.total_cross_section
         scattering_cross_section = params.scattering_cross_section
         source = params.source
-        boundary_conditions = params.boundary_conditions
+        inflow_value = params.inflow_value
 
         self.total_length = np.sum(length_per_zone)
         self.n_cells = np.sum(cells_per_zone)
@@ -24,7 +24,7 @@ class Mesh:
         self.sigma_a = self.sigma_t - self.sigma_s
 
         self.source = np.repeat(source, cells_per_zone)
-        self.boundary_conditions = boundary_conditions
+        self.inflow_value = inflow_value
 
     def compute_lumped_mass_array(self):
         return [self.compute_lumped_mass(i) for i in range(len(self.vertices))]
@@ -58,5 +58,5 @@ class Mesh:
             f"\n n_vertices={self.n_vertices}, \n h={self.h}, \n vertices={self.vertices}, "
             f"\n lumped_mass={self.lumped_mass}, \n material_id={self.material_id}, "
             f"\n sigma_t={self.sigma_t}, \n sigma_s={self.sigma_s}, \n sigma_a={self.sigma_a},"
-            f"\n source={self.source}, \n boundary_conditions={self.boundary_conditions}"
+            f"\n source={self.source}, \n inflow_value={self.inflow_value}"
         )

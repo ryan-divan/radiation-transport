@@ -11,7 +11,7 @@ class ParameterHandler:
             self.total_cross_section = np.array(data["total_cross_section"])
             self.scattering_cross_section = np.array(data["scattering_cross_section"])
             self.source = np.array(data["source"])
-            self.boundary_conditions = np.array(data["boundary_conditions"])
+            self.inflow_value = data["inflow_value"]
         self.verify()
 
     def verify(self):
@@ -22,8 +22,8 @@ class ParameterHandler:
             == len(self.scattering_cross_section)
             == len(self.source)
         ), "All parameter arrays must have the same length."
-        assert len(self.boundary_conditions) == 2, (
-            "Boundary conditions must have exactly two values."
+        assert isinstance(self.inflow_value, (int, float)), (
+            "Inflow value must be a scalar."
         )
 
     def __str__(self):
@@ -31,5 +31,5 @@ class ParameterHandler:
             f"\n Parameters:"
             f"\n length_per_zone={self.length_per_zone}, \n cells_per_zone={self.cells_per_zone},"
             f"\n total_cross_section={self.total_cross_section}, \n scattering_cross_section={self.scattering_cross_section},"
-            f"\n source={self.source}, \n boundary_conditions={self.boundary_conditions}"
+            f"\n source={self.source}, \n inflow_value={self.inflow_value}"
         )
