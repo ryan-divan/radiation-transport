@@ -20,6 +20,7 @@ class ParameterHandler:
             self.tol = data.get("tol", 1e-8)
             self.iter_max = data.get("iter_max", 1000)
             self.use_dsa = data.get("use_dsa", True)
+            self.tau_ap = data.get("tau_ap", True)
             self.boundary_penalty = data.get("boundary_penalty", 1 / 4)
 
         self.verify()

@@ -2,7 +2,7 @@ from scipy.sparse import coo_matrix, csr_matrix
 from scipy.integrate import quad
 from .mesh import Mesh
 import numpy as np
-from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_weights, hat_fns, dhat_fns 
+from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_weights, hat_fns, dhat_fns, tau_fn
 
 # TODO: add connectivity array for higher-dimensional case
 # def generate_connectivity_array(mesh: Mesh):
@@ -11,9 +11,7 @@ from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_wei
 # Assemble the global matrix for the advection-diffusion problem 
 def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
     
-    C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
-    
-    tau =  C * mesh.h if use_supg else np.zeros(mesh.n_cells)
+    tau = tau_fn(mesh, mu) if use_supg else np.zeros(mesh.n_cells)
     
     mass_matrix = assemble_mass_matrix(mu, mesh)
 
@@ -34,8 +32,9 @@ def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True, use_
             matrix[0, 0] += mu * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * (1 / mesh.h[0])
             matrix[1, 0] += mu**2 * tau[0] * dhat_fns[1](0) * (1 / mesh.h[0])
         elif mu < 0:
-            matrix[-1, -1] += mu * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * (1 / mesh.h[-1])
-            matrix[-2, -1] += mu**2 * tau[-1] * dhat_fns[0](1) * (1 / mesh.h[-1])
+            matrix[-1, -1] -= mu * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * (1 / mesh.h[-1])
+            matrix[-2, -1] -= mu**2 * tau[-1] * dhat_fns[0](1) * (1 / mesh.h[-1])
+
 
 
     return matrix
@@ -114,9 +113,7 @@ def assemble_stiffness_matrix(mu: float, mesh: Mesh):
 def assemble_rhs(mu: float, inflow_value: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
     data = np.zeros((mesh.n_vertices))
 
-    C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
-    
-    tau =  C * mesh.h if use_supg else np.zeros(mesh.n_cells)
+    tau = tau_fn(mesh, mu) if use_supg else np.zeros(mesh.n_cells)
     
     # Compute the q * v_h term
     for k in range(mesh.n_cells):
@@ -152,8 +149,9 @@ def assemble_rhs(mu: float, inflow_value: float, mesh: Mesh, boundary_condition:
             data[0] += mu * inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * inflow_value * (1 / mesh.h[0])
             data[1] += mu**2 * tau[0] * dhat_fns[1](0) * inflow_value * (1 / mesh.h[0])
         elif mu < 0:
-            data[-1] += mu * inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * inflow_value * (1 / mesh.h[-1])
-            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * inflow_value * (1 / mesh.h[-1])
+            data[-1] -= mu * inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * inflow_value * (1 / mesh.h[-1])
+            data[-2] -= mu**2 * tau[-1] * dhat_fns[0](1) * inflow_value * (1 / mesh.h[-1])
+
 
     return data
 

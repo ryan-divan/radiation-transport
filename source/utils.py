@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.special import roots_legendre
+from .mesh import Mesh
 
 # Basis functions and derivatives on unit interval
 def phi1hat(x):
@@ -23,6 +24,13 @@ gauss_weights = [1 / 2, 1 / 2]
 hat_fns = [phi0hat, phi1hat]
 dhat_fns = [dphi0hat, dphi1hat]
 
+def tau_fn(mesh: Mesh, mu: float):
+    if mesh.params.tau_ap:
+        C = 1 / (2 * np.abs(mu)) * (1 / (np.maximum(1, mesh.sigma_t * mesh.h)))
+        return C * mesh.h
+    else:
+        C = 1 / (2 * np.abs(mu)) 
+        return C * mesh.h
 
 class AngularQuadrature:
     def __init__(self, order: int):

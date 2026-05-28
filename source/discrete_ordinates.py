@@ -1,6 +1,6 @@
 import numpy as np
 from source.mesh import Mesh
-from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_weights, hat_fns, dhat_fns, AngularQuadrature
+from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_weights, hat_fns, dhat_fns, AngularQuadrature, tau_fn
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 from .advection import assemble_matrix, assemble_rhs
@@ -16,9 +16,7 @@ def assemble_sigma_matrix(mu: float, mesh: Mesh):
     col = []
     data = []
 
-    C = 1 / (2 * np.abs(mu)) * (1 / (np.maximum(1, mesh.sigma_t * mesh.h)))
-    
-    tau =  C * mesh.h
+    tau = tau_fn(mesh, mu)
 
     # (sigma_s / 4pi) * u_h * v_h
     for k in range(mesh.n_cells):
@@ -118,9 +116,10 @@ def assemble_dsa_rhs(mesh: Mesh, r: np.array):
 
     return data
 
-def solve_source_iteration(mesh: Mesh, use_dsa: bool = True, return_iter: bool = False):
+def solve_source_iteration(mesh: Mesh, return_iter: bool = False):
     quadrature = AngularQuadrature(mesh.params.number_of_directions)
     mus = quadrature.angles
+    use_dsa = mesh.params.use_dsa
 
     psi_stars = []
     for i in range(len(mus)):
