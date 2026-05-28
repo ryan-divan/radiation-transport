@@ -1,0 +1,9 @@
+length_per_zone = [10.0]
+cells_per_zone = [100]
+total_cross_section = [10.0]
+scattering_cross_section = [10.0]
+source = [0.05]
+inflow_value = 0
+number_of_directions = 20
+iter_max = 10000
+tol = 1e-8

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 def main():
-    params = ParameterHandler("test_params/discontinuity_error_repro.toml")
+    params = ParameterHandler("test_params/test.toml")
 
     # h, error, and p arrays for convergence rate calculation
     hs = []
@@ -50,20 +50,20 @@ def main():
         #      # test system exact solution
 
 
-        # exact_fn = lambda x : (mesh.inflow_value * np.exp(- (sigma_1 / mu) * x)) if 0 <= x < 0.5 else (mesh.inflow_value * np.exp((- (sigma_1 / mu)) * 0.5) * np.exp(-(sigma_2 / mu) * (x-0.5)))  # two zone exact solution
+        # exact_fn = lambda x : (mesh.params.inflow_value * np.exp(- (sigma_1 / mu) * x)) if 0 <= x < 0.5 else (mesh.params.inflow_value * np.exp((- (sigma_1 / mu)) * 0.5) * np.exp(-(sigma_2 / mu) * (x-0.5)))  # two zone exact solution
         
         def generate_K(mu,mesh):
             K = np.zeros(len(mesh.zone_vertices))
-            K[0] = mesh.inflow_value
+            K[0] = mesh.params.inflow_value
             for i in range(mesh.n_zones):
-                K[i+1] = K[i] * np.exp(-mesh.total_cross_section[i]/mu * (mesh.zone_vertices[i+1] - mesh.zone_vertices[i])) + mesh.source[i]/mesh.total_cross_section[i] * (1 - np.exp(-mesh.total_cross_section[i]/mu * (mesh.zone_vertices[i+1] - mesh.zone_vertices[i]))) 
+                K[i+1] = K[i] * np.exp(-mesh.params.total_cross_section[i]/mu * (mesh.zone_vertices[i+1] - mesh.zone_vertices[i])) + mesh.params.source[i]/mesh.params.total_cross_section[i] * (1 - np.exp(-mesh.params.total_cross_section[i]/mu * (mesh.zone_vertices[i+1] - mesh.zone_vertices[i]))) 
             return K
         
 
         def exact_fn(x,K,mu,mesh):
             for i in range(mesh.n_zones):
                 if (mesh.zone_vertices[i] <= x <= mesh.zone_vertices[i+1]) or np.isclose(x, mesh.zone_vertices[i]) or np.isclose(x, mesh.zone_vertices[i+1]):
-                    return K[i] * np.exp(-mesh.total_cross_section[i]/mu * (x - mesh.zone_vertices[i])) + mesh.source[i]/mesh.total_cross_section[i] * (1 - np.exp(-mesh.total_cross_section[i]/mu * (x - mesh.zone_vertices[i]))) 
+                    return K[i] * np.exp(-mesh.params.total_cross_section[i]/mu * (x - mesh.zone_vertices[i])) + mesh.params.source[i]/mesh.params.total_cross_section[i] * (1 - np.exp(-mesh.params.total_cross_section[i]/mu * (x - mesh.zone_vertices[i]))) 
  
         K = generate_K(mu, mesh)
         

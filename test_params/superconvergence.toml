@@ -1,0 +1,6 @@
+length_per_zone = [0.3, 0.3, 0.4]
+cells_per_zone = [30, 30, 40]
+total_cross_section = [1.0, 1e4, 2.0]
+scattering_cross_section = [0.0, 0.0, 0.0]
+source = [1.0, 0.0, 1.0]
+inflow_value = 1

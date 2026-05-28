@@ -8,7 +8,7 @@ from scipy.sparse.linalg import spsolve
 import matplotlib.pyplot as plt
 
 def main():
-    params = ParameterHandler("test_params/test_system.toml")
+    params = ParameterHandler("test_params/superconvergence.toml")
 
     # generate mesh
     mesh = Mesh(params)
@@ -37,7 +37,7 @@ def main():
     plt.plot(mesh.vertices, U, label="approximate")
     # plt.plot(mesh.vertices, U_exact, label="exact")
     # plt.legend()
-    plt.savefig("test_supg_full_system.png")
+    plt.savefig("test_superconvergence_undershoot.png")
 
     print("Test passed!")
 

@@ -5,27 +5,22 @@ from scipy.integrate import quad
 
 class Mesh:
     def __init__(self, params: ParameterHandler):
-        self.length_per_zone = params.length_per_zone
-        self.cells_per_zone = params.cells_per_zone
-        self.total_cross_section = params.total_cross_section
-        self.scattering_cross_section = params.scattering_cross_section
-        self.source = params.source
-        self.inflow_value = params.inflow_value
+        self.params = params    
 
-        self.total_length = np.sum(self.length_per_zone)
-        self.n_cells = np.sum(self.cells_per_zone)
-        self.n_vertices = np.sum(self.cells_per_zone) + 1
-        self.n_zones = len(self.length_per_zone)
-        self.h = np.repeat(self.length_per_zone / self.cells_per_zone, self.cells_per_zone)
-        self.zone_vertices = np.cumsum(np.concatenate(([0], self.length_per_zone)))
+        self.total_length = np.sum(self.params.length_per_zone)
+        self.n_cells = np.sum(self.params.cells_per_zone)
+        self.n_vertices = np.sum(self.params.cells_per_zone) + 1
+        self.n_zones = len(self.params.length_per_zone)
+        self.h = np.repeat(self.params.length_per_zone / self.params.cells_per_zone, self.params.cells_per_zone)
+        self.zone_vertices = np.cumsum(np.concatenate(([0], self.params.length_per_zone)))
         self.vertices = np.cumsum(np.concatenate(([0], self.h)))
         self.lumped_mass = self.compute_lumped_mass_array()
-        self.material_id = np.repeat(np.arange(len(self.length_per_zone)), self.cells_per_zone)
-        self.sigma_t = np.repeat(self.total_cross_section, self.cells_per_zone)
-        self.sigma_s = np.repeat(self.scattering_cross_section, self.cells_per_zone)
+        self.material_id = np.repeat(np.arange(len(self.params.length_per_zone)), self.params.cells_per_zone)
+        self.sigma_t = np.repeat(self.params.total_cross_section, self.params.cells_per_zone)
+        self.sigma_s = np.repeat(self.params.scattering_cross_section, self.params.cells_per_zone)
         self.sigma_a = self.sigma_t - self.sigma_s
 
-        self.source_per_cell = np.repeat(self.source, self.cells_per_zone)
+        self.source_per_cell = np.repeat(self.params.source, self.params.cells_per_zone)
 
     def compute_lumped_mass_array(self):
         return [self.compute_lumped_mass(i) for i in range(len(self.vertices))]

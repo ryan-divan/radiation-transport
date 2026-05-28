@@ -2,33 +2,11 @@ from scipy.sparse import coo_matrix, csr_matrix
 from scipy.integrate import quad
 from .mesh import Mesh
 import numpy as np
+from .utils import phi1hat, phi0hat, dphi1hat, dphi0hat, gauss_points, gauss_weights, hat_fns, dhat_fns 
 
 # TODO: add connectivity array for higher-dimensional case
 # def generate_connectivity_array(mesh: Mesh):
 #     pass
-
-# Basis functions and derivatives on unit interval
-def phi1hat(x):
-    return x
-
-
-def phi0hat(x):
-    return 1 - x
-
-
-def dphi1hat(x):
-    return 1
-
-
-def dphi0hat(x):
-    return -1
-
-# Quadrature points and weights for 2-point Gauss quadrature on [0, 1]
-gauss_points = [0.5 * (1 - 1 / np.sqrt(3)), 0.5 * (1 + 1 / np.sqrt(3))]
-gauss_weights = [1 / 2, 1 / 2]
-
-hat_fns = [phi0hat, phi1hat]
-dhat_fns = [dphi0hat, dphi1hat]
 
 # Assemble the global matrix for the advection-diffusion problem 
 def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
@@ -169,12 +147,12 @@ def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True, use_sup
 
     if boundary_condition:
         if mu > 0:
-            # data[0] += mu * mesh.inflow_value
-            data[0] += mu * mesh.inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * mesh.inflow_value * (1 / mesh.h[0])
-            data[1] += mu**2 * tau[0] * dhat_fns[1](0) * mesh.inflow_value * (1 / mesh.h[0])
+            # data[0] += mu * mesh.params.inflow_value
+            data[0] += mu * mesh.params.inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * mesh.params.inflow_value * (1 / mesh.h[0])
+            data[1] += mu**2 * tau[0] * dhat_fns[1](0) * mesh.params.inflow_value * (1 / mesh.h[0])
         elif mu < 0:
-            data[-1] += mu * mesh.inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * mesh.inflow_value * (1 / mesh.h[-1])
-            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * mesh.inflow_value * (1 / mesh.h[-1])
+            data[-1] += mu * mesh.params.inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * mesh.params.inflow_value * (1 / mesh.h[-1])
+            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * mesh.params.inflow_value * (1 / mesh.h[-1])
 
     return data
 
