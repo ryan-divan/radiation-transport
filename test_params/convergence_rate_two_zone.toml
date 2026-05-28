@@ -4,3 +4,4 @@ total_cross_section = [1.0, 10.0]
 scattering_cross_section = [0.0, 0.0]
 source = [0.0, 0.0]
 inflow_value = 1
+number_of_directions = 1

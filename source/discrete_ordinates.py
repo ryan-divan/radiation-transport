@@ -16,7 +16,7 @@ def assemble_sigma_matrix(mu: float, mesh: Mesh):
     col = []
     data = []
 
-    C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
+    C = 1 / (2 * np.abs(mu)) * (1 / (np.maximum(1, mesh.sigma_t * mesh.h)))
     
     tau =  C * mesh.h
 
@@ -32,7 +32,7 @@ def assemble_sigma_matrix(mu: float, mesh: Mesh):
                 for x in range(len(gauss_points)):
                     acc += (
                         h
-                        * (per_cell_sigma_s/ (4 * np.pi))
+                        * (per_cell_sigma_s / (4 * np.pi))
                         * hat_fns[i_hat](gauss_points[x])
                         * hat_fns[j_hat](gauss_points[x])
                         * gauss_weights[x]
@@ -123,9 +123,10 @@ def solve_source_iteration(mesh: Mesh, use_dsa: bool = True, return_iter: bool =
     mus = quadrature.angles
 
     psi_stars = []
-    for mu in mus:
+    for i in range(len(mus)):
+        mu = mus[i]
         M = assemble_matrix(mu, mesh)
-        Q = assemble_rhs(mu, mesh)
+        Q = assemble_rhs(mu, inflow_value=mesh.params.inflow_value[i], mesh=mesh)
 
         psi_star = sp.linalg.spsolve(M, Q)
         psi_stars.append(psi_star)

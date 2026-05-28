@@ -28,6 +28,7 @@ def assemble_matrix(mu: float, mesh: Mesh, boundary_condition: bool = True, use_
     matrix = mass_matrix + stiffness_matrix + s3_matrix + s4_matrix
     # matrix = mass_matrix + stiffness_matrix #+ s3_matrix + s4_matrix
 
+
     if boundary_condition:
         if mu > 0:
             matrix[0, 0] += mu * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * (1 / mesh.h[0])
@@ -110,7 +111,7 @@ def assemble_stiffness_matrix(mu: float, mesh: Mesh):
     
     return stiffness_matrix
 
-def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
+def assemble_rhs(mu: float, inflow_value: float, mesh: Mesh, boundary_condition: bool = True, use_supg: bool = True):
     data = np.zeros((mesh.n_vertices))
 
     C = 1 / (2 * np.abs(mu)) * 1 / (np.maximum(1, mesh.sigma_t * mesh.h))
@@ -148,11 +149,11 @@ def assemble_rhs(mu: float, mesh: Mesh, boundary_condition: bool = True, use_sup
     if boundary_condition:
         if mu > 0:
             # data[0] += mu * mesh.params.inflow_value
-            data[0] += mu * mesh.params.inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * mesh.params.inflow_value * (1 / mesh.h[0])
-            data[1] += mu**2 * tau[0] * dhat_fns[1](0) * mesh.params.inflow_value * (1 / mesh.h[0])
+            data[0] += mu * inflow_value * hat_fns[0](0) + mu**2 * tau[0] * dhat_fns[0](0) * inflow_value * (1 / mesh.h[0])
+            data[1] += mu**2 * tau[0] * dhat_fns[1](0) * inflow_value * (1 / mesh.h[0])
         elif mu < 0:
-            data[-1] += mu * mesh.params.inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * mesh.params.inflow_value * (1 / mesh.h[-1])
-            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * mesh.params.inflow_value * (1 / mesh.h[-1])
+            data[-1] += mu * inflow_value * hat_fns[1](1) + mu**2 * tau[-1] * dhat_fns[1](1) * inflow_value * (1 / mesh.h[-1])
+            data[-2] += mu**2 * tau[-1] * dhat_fns[0](1) * inflow_value * (1 / mesh.h[-1])
 
     return data
 

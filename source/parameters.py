@@ -11,12 +11,17 @@ class ParameterHandler:
             self.total_cross_section = np.array(data["total_cross_section"])
             self.scattering_cross_section = np.array(data["scattering_cross_section"])
             self.source = np.array(data["source"])
+
+            self.number_of_directions = data.get("number_of_directions", 1)
             self.inflow_value = data["inflow_value"]
-            self.number_of_directions = data["number_of_directions"]
-            self.tol = data["tol"]
-            self.iter_max = data["iter_max"]
+            if not isinstance(self.inflow_value, list):
+                self.inflow_value = [self.inflow_value for _ in range(self.number_of_directions)]
+
+            self.tol = data.get("tol", 1e-8)
+            self.iter_max = data.get("iter_max", 1000)
             self.use_dsa = data.get("use_dsa", True)
-            self.boundary_penalty = data.get("boundary_penalty", 1 / self.tol)
+            self.boundary_penalty = data.get("boundary_penalty", 1 / 4)
+
         self.verify()
 
     def verify(self):
@@ -27,11 +32,14 @@ class ParameterHandler:
             == len(self.scattering_cross_section)
             == len(self.source)
         ), "All parameter arrays must have the same length."
-        assert isinstance(self.inflow_value, (int, float)), (
+        assert all([isinstance(elem, (int, float)) for elem in self.inflow_value]), (
             "Inflow value must be a scalar."
         )
         assert isinstance(self.number_of_directions, int), (
             "Number of directions must be an integer."
+        )
+        assert self.number_of_directions == len(self.inflow_value), (
+            "Length of inflow_value array must match number_of_directions."
         )
 
     def __str__(self):

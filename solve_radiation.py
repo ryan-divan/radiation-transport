@@ -13,20 +13,21 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 
 def main():
-    params = ParameterHandler("test_params/reed_problem.toml")
+    params = ParameterHandler("test_params/anisotropic_test.toml")
     mesh = Mesh(params)
     
     
-    phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, use_dsa=mesh.params.use_dsa, return_iter=True)
+    phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, return_iter=True)
 
+    phi_output = phi_output / (2 * np.pi)
 
     plt.plot(mesh.vertices, phi_output)
-    plt.savefig("radiation_iteration_phi_reed_problem.png")
+    plt.savefig("radiation_iteration_phi_anisotropic_test.png")
     plt.close()
 
     # print(psi_outputs.shape)
     # plt.plot(mesh.vertices, psi_outputs[0])
-    # plt.savefig("radiation_iteration_psi_reed_problem.png")
+    # plt.savefig("radiation_iteration_psi_anisotropic_test.png")
     # plt.close()
 
     fig = plt.figure(figsize=(10, 7))
@@ -42,9 +43,9 @@ def main():
     ax.set_xlabel('x (spatial)')
     ax.set_ylabel('mu (angular)')
     ax.set_zlabel('ψ')
-    ax.set_title('Angular Flux - Reed Problem')
+    ax.set_title('Angular Flux - Anisotropic Test')
 
-    plt.savefig("radiation_iteration_psi_reed_problem_3d.png", dpi=150, bbox_inches='tight')
+    plt.savefig("radiation_iteration_anisotropic_test_3d.png", dpi=150, bbox_inches='tight')
     plt.close()
 
     print("Number of iterations:", num_iters)

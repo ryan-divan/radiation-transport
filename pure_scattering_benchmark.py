@@ -26,6 +26,8 @@ def main():
         print(f"sigma_s={sigma_s}, sigma_t={params.total_cross_section[0]}, ratio={sigma_s / params.total_cross_section[0]}")
         print(f"num_iters={num_iters}")
 
+        
+
 
     # plt.plot(mesh.vertices, phi_output)
     # plt.savefig("radiation_iteration_phi_scattering_benchmark.png")

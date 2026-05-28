@@ -22,6 +22,7 @@ class Mesh:
 
         self.source_per_cell = np.repeat(self.params.source, self.params.cells_per_zone)
 
+    
     def compute_lumped_mass_array(self):
         return [self.compute_lumped_mass(i) for i in range(len(self.vertices))]
 
