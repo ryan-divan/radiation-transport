@@ -19,11 +19,12 @@ def main():
 
     filename = sys.argv[1]
 
+    use_gmres = sys.argv[2].lower() == "gmres" if len(sys.argv) > 2 else False
+
     params = ParameterHandler(f"test_params/{filename}.toml")
     mesh = Mesh(params)
-    
-    
-    phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, return_iter=True)
+
+    phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, return_iter=True, use_gmres=use_gmres)
 
     phi_output = phi_output / (2 * np.pi)
 

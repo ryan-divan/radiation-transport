@@ -13,24 +13,26 @@ import pandas as pd
 from mpl_toolkits.mplot3d import Axes3D
 
 def main():
+
+    CELLS = [10000] # [100, 1000, 10000]
     
     params = ParameterHandler(f"test_params/grazing_sigma100_20K.toml")
-    params2 = ParameterHandler(f"test_params/grazing_sigma100_500.toml")
+    for cell in CELLS:
+        params.cells_per_zone = cell
+        mesh = Mesh(params)
+        phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, return_iter=True)
+        phi_output = phi_output / (2 * np.pi)
+        plt.plot(mesh.vertices, phi_output, label="Points per zone: " + str(cell))
 
-    mesh = Mesh(params)
-    phi_output, psi_outputs, num_iters = solve_source_iteration(mesh, return_iter=True)
-    phi_output = phi_output / (2 * np.pi)
-    plt.plot(mesh.vertices, phi_output, label="20K")
+    plt.xlabel("x")
+    plt.ylabel("Scalar Flux")
+    plt.title("Anisotropic Scattering with Grazing Angles")
 
-    mesh2 = Mesh(params2)
-    phi_output2, _, _ = solve_source_iteration(mesh2, return_iter=True)
-    phi_output2 = phi_output2 / (2 * np.pi)
-    plt.plot(mesh2.vertices, phi_output2, label="500")
-
-    plt.legend()
     plt.show()
 
-    plt.savefig(f"radiation_iteration_grazing_sigma100_comparison.png", dpi=1500)
+    plt.legend()
+
+    # plt.savefig(f"radiation_iteration_grazing_sigma100_comparison.png", dpi=150)
 
     plt.close()
 

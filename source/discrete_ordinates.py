@@ -5,7 +5,7 @@ from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 from .advection import assemble_matrix, assemble_rhs
 from .poisson import assemble_poisson_matrix, assemble_poisson_rhs
-from scipy.sparse.linalg import spsolve
+from scipy.sparse.linalg import spsolve, gmres, LinearOperator
 
 gauss_points = [0.5 * (1 - 1 / np.sqrt(3)), 0.5 * (1 + 1 / np.sqrt(3))]
 gauss_weights = [1 / 2, 1 / 2]
@@ -116,7 +116,7 @@ def assemble_dsa_rhs(mesh: Mesh, r: np.array):
 
     return data
 
-def solve_source_iteration(mesh: Mesh, return_iter: bool = False):
+def solve_source_iteration(mesh: Mesh, return_iter: bool = False, use_gmres: bool = False):
     quadrature = AngularQuadrature(mesh.params.number_of_directions)
     mus = quadrature.angles
     use_dsa = mesh.params.use_dsa
@@ -145,15 +145,39 @@ def solve_source_iteration(mesh: Mesh, return_iter: bool = False):
 
     M = assemble_poisson_matrix(mesh) if use_dsa else None # poisson matrix for DSA preconditioning
 
-    k = 0
-    while l1_norm(mesh, r) / phi_star_norm > mesh.params.tol and k <= mesh.params.iter_max:
-        phi += r + sp.linalg.spsolve(M, assemble_dsa_rhs(mesh, r)) if use_dsa else r
-        A_phi, psis_stacked = apply_operator_A(mesh, phi, mus, sigma_matrices, lhs_matrices, quadrature)
-        r = phi_star - A_phi
-        k += 1
+    if use_gmres:
+        A_op = LinearOperator((mesh.n_vertices, mesh.n_vertices), matvec=lambda x: apply_operator_A(mesh, x, mus, sigma_matrices, lhs_matrices, quadrature)[0])
 
-    final_psis = psis_stacked + psi_stars
-    if return_iter:
-        return phi, final_psis, k    
+        reference_scale = np.linalg.norm(phi_star) + 1e-13
 
-    return phi, final_psis
+        M_op = LinearOperator((mesh.n_vertices, mesh.n_vertices), matvec=lambda x: x + sp.linalg.spsolve(M, assemble_dsa_rhs(mesh, x))) if use_dsa else None
+
+        history = []
+        def callback(residual):
+            rel_err = residual / reference_scale
+            history.append(rel_err)
+        
+        phi, info = gmres(A_op, phi_star, x0=phi, rtol=mesh.params.tol, maxiter=mesh.params.iter_max, M=M_op, callback=callback, callback_type='legacy')
+
+        _, psis_stacked = apply_operator_A(mesh, phi, mus, sigma_matrices, lhs_matrices, quadrature)
+        final_psis = psis_stacked + psi_stars
+
+        k = len(history)
+
+        if return_iter:
+            return phi, final_psis, k 
+
+
+    else:
+        k = 0
+        while l1_norm(mesh, r) / phi_star_norm > mesh.params.tol and k <= mesh.params.iter_max:
+            phi += r + sp.linalg.spsolve(M, assemble_dsa_rhs(mesh, r)) if use_dsa else r
+            A_phi, psis_stacked = apply_operator_A(mesh, phi, mus, sigma_matrices, lhs_matrices, quadrature)
+            r = phi_star - A_phi
+            k += 1
+
+        final_psis = psis_stacked + psi_stars
+        if return_iter:
+            return phi, final_psis, k    
+
+        return phi, final_psis
